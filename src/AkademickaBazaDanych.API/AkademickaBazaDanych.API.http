@@ -1,0 +1,6 @@
+@AkademickaBazaDanych.API_HostAddress = http://localhost:5047
+
+GET {{AkademickaBazaDanych.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
