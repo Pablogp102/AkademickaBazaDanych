@@ -1,5 +1,6 @@
 ﻿using AkademickaBazaDanych.Contracts.Students.Commands;
 using AkademickaBazaDanych.Contracts.Students.DTOs;
+using AkademickaBazaDanych.Contracts.Students.Enums;
 using AkademickaBazaDanych.Contracts.Students.Queries;
 
 using MediatR;
@@ -28,8 +29,14 @@ namespace AkademickaBazaDanych.API.Controllers
         }
         [HttpGet("get-all-students")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IEnumerable<StudentDTO>> GetAllStudents([FromQuery] GetAllStudentsQuery query)
+        public async Task<IEnumerable<StudentDTO>> GetAllStudents(
+        [FromQuery] string? searchTerm,
+        [FromQuery] SortingOptions? sortBy,
+        [FromQuery] bool isAscending,
+        [FromQuery] int pageNumber,
+        [FromQuery] int pageSize)
         {
+            var query = new GetAllStudentsQuery(searchTerm, sortBy, isAscending, pageNumber, pageSize);
             var result = await mediator.Send(query);
             return result;
         }

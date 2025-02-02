@@ -4,6 +4,8 @@ using AkademickaBazaDanych.Domain.Students;
 using AkademickaBazaDanych.Infrastructure.Db;
 
 using Microsoft.EntityFrameworkCore;
+
+using System.Linq;
 namespace AkademickaBazaDanych.Infrastructure.Studnets;
 
 public class StudentRepository : IStudentRepository
@@ -18,40 +20,12 @@ public class StudentRepository : IStudentRepository
     public async Task<Student> Add(Student student)
         => (await _set.AddAsync(student)).Entity;
 
-    public async Task<IEnumerable<Student>> GetAll(StudentSortingOptions sortBy = StudentSortingOptions.LastName, StudentSortingDirection sortDirection = StudentSortingDirection.Ascending)
+    public async Task<IEnumerable<Student>> GetAll()
     {
         var query = _set.AsNoTracking();
-
-        switch (sortBy)
-        {
-            case StudentSortingOptions.PESEL:
-                query = sortDirection == StudentSortingDirection.Ascending
-                    ? query.OrderBy(s => s.PESEL)
-                    : query.OrderByDescending(s => s.PESEL);
-                break;
-            case StudentSortingOptions.FirstName:
-                query = sortDirection == StudentSortingDirection.Ascending
-                    ? query.OrderBy(s => s.FirstName)
-                    : query.OrderByDescending(s => s.FirstName);
-                break;
-            case StudentSortingOptions.LastName:
-                query = sortDirection == StudentSortingDirection.Ascending
-                    ? query.OrderBy(s => s.LastName)
-                    : query.OrderByDescending(s => s.LastName);
-                break;
-            case StudentSortingOptions.IndexNumber:
-                query = sortDirection == StudentSortingDirection.Ascending
-                    ? query.OrderBy(s => s.IndexNumber)
-                    : query.OrderByDescending(s => s.IndexNumber);
-                break;
-            default:
-                query = query.OrderBy(s => s.LastName); 
-                break;
-        }
-
         return await query.ToListAsync();
     }
-
+    
     public async Task<Student?> GetById(Guid id)
         => await _set.FirstOrDefaultAsync(s => s.Id == id) 
         ?? throw new ArgumentNullException(nameof(id));

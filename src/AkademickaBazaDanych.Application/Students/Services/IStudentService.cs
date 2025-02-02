@@ -7,7 +7,7 @@ namespace AkademickaBazaDanych.Application.Students.Services;
 public interface IStudentService
 {
     Task<Student> AddStudent(Student student);
-    Task<IEnumerable<StudentDTO>> GetAllStudents();
+    Task<IEnumerable<StudentDTO>> GetAllStudents(string? searchTerm, SortingOptions? sortBy, bool isAscending, int pageNumber, int pageSize);
     Task<Student> GetStudentById(Guid id);
     Task<IEnumerable<StudentDetailsDTO>> GetStudentsByLastName(string lastName);
     Task<IEnumerable<StudentDetailsDTO>> GetStudentsByPESEL(string PeselPart);
@@ -28,18 +28,57 @@ public class StudentService(IStudentRepository studentRepository) : IStudentServ
         }
         return await studentRepository.Add(student);
     }
-    public async Task<IEnumerable<StudentDTO>> GetAllStudents()
+    public async Task<IEnumerable<StudentDTO>> GetAllStudents(
+    string? searchTerm,
+    SortingOptions? sortBy,
+    bool isAscending,
+    int pageNumber,
+    int pageSize)
     {
-        var students = await studentRepository.GetAll();
-        
-        return students?.Select(s => new StudentDTO
+        var studentsQuery = await studentRepository.GetAll();
+
+        if (!string.IsNullOrEmpty(searchTerm))
         {
-            FirstName = s!.FirstName,
-            LastName = s!.LastName,
-            PESEL = s!.PESEL?.Value.ToString(),
-            IndexNumber = s.IndexNumber?.Value.ToString()
-        }) ?? Enumerable.Empty<StudentDTO>();
+            studentsQuery = studentsQuery.Where(s =>
+                s.LastName!.StartsWith(searchTerm) ||
+                s.PESEL!.Value.StartsWith(searchTerm)
+            );
+        }
+
+        var studentsList = studentsQuery.ToList();
+
+        if (sortBy != null)
+        {
+            if (sortBy == SortingOptions.LastName)
+            {
+                studentsList = isAscending
+                    ? studentsList.OrderBy(s => s.LastName ?? string.Empty).ToList()
+                    : studentsList.OrderByDescending(s => s.LastName ?? string.Empty).ToList();
+            }
+            else if (sortBy == SortingOptions.PESEL)
+            {
+                studentsList = isAscending
+                    ? studentsList.OrderBy(s => s.PESEL?.ToString() ?? string.Empty).ToList()
+                    : studentsList.OrderByDescending(s => s.PESEL?.ToString() ?? string.Empty).ToList();
+            }
+        }
+
+        var pagedStudents = studentsList
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize);
+
+        var studentsDTO = pagedStudents
+            .Select(s => new StudentDTO(
+                s.FirstName!,   
+                s.LastName!,
+                s.PESEL?.ToString() ?? string.Empty,  
+                s.IndexNumber?.ToString() ?? string.Empty
+            ));
+
+        return studentsDTO;
     }
+
+
     public async Task<Student> GetStudentById(Guid id)
     {
         if (id == Guid.Empty)
@@ -61,16 +100,15 @@ public class StudentService(IStudentRepository studentRepository) : IStudentServ
         {
             Gender? gender = MapGender(student);
 
-            return new StudentDetailsDTO
-            {
-                FirstName = student!.FirstName,
-                LastName = student.LastName,
-                PESEL = student.PESEL?.Value.ToString(),
-                IndexNumber = student.IndexNumber?.Value.ToString(),
-                Address = student.Address?.ToString(),
-                Gender = gender
-            };
-        });
+            return new StudentDetailsDTO(
+                student!.FirstName!,
+                student.LastName!,
+                student.PESEL!.Value.ToString(),
+                student.IndexNumber!.Value.ToString(),
+                student.Address!.ToString(),
+                gender
+            );
+        }) ?? Enumerable.Empty<StudentDetailsDTO>();
     }
 
     public async Task<IEnumerable<StudentDetailsDTO>> GetStudentsByLastName(string lastName)
@@ -87,15 +125,14 @@ public class StudentService(IStudentRepository studentRepository) : IStudentServ
         {
             Gender? gender = MapGender(student);
 
-            return new StudentDetailsDTO
-            {
-                FirstName = student!.FirstName,
-                LastName = student.LastName,
-                PESEL = student.PESEL?.Value.ToString(),
-                IndexNumber = student.IndexNumber?.Value.ToString(),
-                Address = student.Address?.ToString(),
-                Gender = gender
-            };
+            return new StudentDetailsDTO(
+                student!.FirstName!,
+                student.LastName!,
+                student.PESEL!.Value.ToString(),
+                student.IndexNumber!.Value.ToString(),
+                student.Address!.ToString(),
+                gender
+            );
         });
     }
 
@@ -113,26 +150,24 @@ public class StudentService(IStudentRepository studentRepository) : IStudentServ
     {
         var students = await studentRepository.SortByPESEL();
 
-        return students.Select(s => new StudentDTO
-        {
-            FirstName = s!.FirstName,
-            LastName = s!.LastName,
-            PESEL = s!.PESEL?.Value.ToString(),
-            IndexNumber = s.IndexNumber!.Value.ToString()
-        }) ?? Enumerable.Empty<StudentDTO>();
+        return students.Select(s => new StudentDTO(
+            s!.FirstName!,
+            s!.LastName!,
+            s!.PESEL!.Value.ToString(),
+            s.IndexNumber!.Value.ToString()
+        )) ?? Enumerable.Empty<StudentDTO>();
     }
 
     public async Task<IEnumerable<StudentDTO>> GetSortedStudentsByLastName()
     {
         var students = await studentRepository.SortByLastName();
 
-        return students.Select(s => new StudentDTO
-        {
-            FirstName = s.FirstName,
-            LastName = s.LastName,
-            PESEL = s!.PESEL?.Value.ToString(),
-            IndexNumber = s.IndexNumber!.Value.ToString()
-        }) ?? Enumerable.Empty<StudentDTO>();
+        return students.Select(s => new StudentDTO(
+            s.FirstName!,
+            s.LastName!,
+            s!.PESEL!.Value.ToString(),
+            s.IndexNumber!.Value.ToString()
+        )) ?? Enumerable.Empty<StudentDTO>();
     }
   
     public async Task<bool> RemoveStudent(string indexNumber)
